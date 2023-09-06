@@ -6,14 +6,36 @@ read
 initial_xinput=$(xinput --list)
 initial_xrandr=$(xrandr)
 
-echo "Please plug in the relevant devices again and press Enter..."
+if [ $? -ne 0 ]; then
+   echo "Error: Failed to get initial device state"
+   exit 1
+fi
+
+echo "Please plug in the relevant devices and press Enter..."
 read
 
-final_xinput=$(xinput --list)
-final_xrandr=$(xrandr)
+new_xinput=$(xinput --list)
+new_xrandr=$(xrandr)
 
-output_device=$(diff <(echo "$initial_xrandr") <(echo "$final_xrandr") | grep -oP '(?<=\> )[^ ]+(?= connected)')
-input_device=$(diff <(echo "$initial_xinput") <(echo "$final_xinput") | grep -oP '(?<=id=)[0-9]+(?=\t)')
+if [ $? -ne 0 ]; then
+   echo "Error: Failed to get new device state"
+   exit 1
+fi
+
+output_device=$(diff <(echo "$initial_xrandr") <(echo "$new_xrandr") | grep -oP '(?<=\> )[^ ]+(?= connected)')
+input_device=$(diff <(echo "$initial_xinput") <(echo "$new_xinput") | grep -oP '(?<=id=)[0-9]+(?=\t)')
+
+if [ -z "$output_device" ] || [ -z "$input_device" ]; then
+   echo "Error: Failed to detect devices"
+   exit 1
+fi
 
 echo "Mapping input \"$input_device\" to output \"$output_device\"..."
 xinput map-to-output $input_device $output_device
+
+if [ $? -ne 0 ]; then
+   echo "Error: Failed to map input to output"
+   exit 1
+fi
+
+echo "Done."
